@@ -2,6 +2,8 @@ import numpy as np
 import imutils
 import cv2
 import math
+from playsound import playsound
+import thread
 
 # greenLower = (29, 86, 6)
 # greenUpper = (64, 255, 255)
@@ -143,6 +145,8 @@ class TargetDetector:
                     self.greenScore += 1
                     self.captureGreen = False
                     self.lastGreenLocation = green
+                    thread.start_new_thread(playsound, ("explosion_player.wav", 1))
+                    # playsound("explosion_player.wav")
                     # TODO in here return True
                 if self.greenCount > 20:
                     self.greenCount = 0
@@ -161,6 +165,7 @@ class TargetDetector:
                     self.purpleScore += 1
                     self.capturePurple = False
                     self.lastPurpleLocation = purple
+                    thread.start_new_thread(playsound, ("explosion_asteroid.wav", 1))
                     # TODO in here return True
                 if self.purpleCount > 20:
                     self.purpleCount = 0
