@@ -1,6 +1,7 @@
 import numpy as np
 import imutils
 import cv2
+import math
 
 # greenLower = (29, 86, 6)
 # greenUpper = (64, 255, 255)
@@ -18,19 +19,24 @@ purpleUpper = (180, 250, 250)
 class TargetDetector:
     def __init__(self):
         self.camera = None
-
-        self.locationX = 150
-        self.locationY = 175
-        self.speed = 10
-        self.speedX = self.speed
-        self.speedY = self.speed
         self.count = 0
-        self.timer = 60
+        self.init_game()
 
+    def init_game(self):
         self.greenCount = 0
         self.purpleCount = 0
         self.captureGreen = False
         self.capturePurple = False
+        self.greenScore = 0
+        self.purpleScore = 0
+        self.lastGreenLocation = None
+        self.lastPurpleLocation = None
+        self.isGameRunning = True
+        self.locationX = 150
+        self.locationY = 175
+        self.direction = 1
+        self.speedX = 0
+        self.speedY = 0
 
     def setup_camera(self):
         self.camera = cv2.VideoCapture(0)
@@ -38,9 +44,6 @@ class TargetDetector:
     def close_camera(self):
         self.camera.release()
         cv2.destroyAllWindows()
-
-    def set_speed(self, speed):
-        self.speed = speed
 
     @staticmethod
     def process_image(frame, hsv, lower, upper):
@@ -76,7 +79,8 @@ class TargetDetector:
     def is_within_target(target, bear):
         if target and bear:
             sqrSum = (target[0] - bear[0]) ** 2 + (target[1] - bear[1]) ** 2
-            if (target[2] - bear[2]) ** 2 <= sqrSum <= (target[2] + bear[2]) ** 2:
+
+            if target[2] > math.sqrt(sqrSum):
                 return True
         return False
 
@@ -85,6 +89,11 @@ class TargetDetector:
 
     def capture_purple(self):
         self.capturePurple = True
+
+    def draw_cross(self, frame, point, color):
+        lineThickness = 2
+        cv2.line(frame, (point[0] - 10, point[1] - 10), (point[0] + 10, point[1] + 10), color, lineThickness)
+        cv2.line(frame, (point[0] - 10, point[1] + 10), (point[0] + 10, point[1] - 10), color, lineThickness)
 
     def display_view(self):
         while True:
@@ -106,46 +115,72 @@ class TargetDetector:
 
             # cv2.imshow("Frame", hsv)
 
-            if self.locationX > 600 - 150:
-                self.speedX = -self.speed
-            elif self.locationX < 150:
-                self.speedX = self.speed
 
+            if self.locationX > 600 - 150:
+                self.direction = -1
+            elif self.locationX < 150:
+                self.direction = 1
+
+            self.speedX = max(self.purpleScore, self.greenScore) * self.direction
             self.locationX += self.speedX
 
             cv2.circle(frame, (self.locationX, self.locationY), 100, (0, 0, 255), -1)
             cv2.circle(frame, (self.locationX, self.locationY), 20, (255, 255, 255), -1)
 
             font = cv2.FONT_HERSHEY_SIMPLEX
-            cv2.putText(frame, str(self.timer), (10, 50), font, 2, (255, 255, 255), 2, cv2.CV_AA)
+            cv2.putText(frame, str(self.greenScore), (10, 50), font, 2, (0, 255, 0), 2, cv2.CV_AA)
+            cv2.putText(frame, str(self.purpleScore), (600-100, 50), font, 2, (255, 0, 255), 2, cv2.CV_AA)
 
-            target = (self.locationX, self.locationY, 50)
+            target = (self.locationX, self.locationY, 100)
 
-            if self.captureGreen:
+            if self.captureGreen and self.isGameRunning:
                 self.greenCount += 1
                 green = self.process_image(frame, hsv, greenLower, greenUpper)
                 is_green = self.is_within_target(target, green)
                 if is_green:
                     print "Found green!", self.count
                     self.count += 1
+                    self.greenScore += 1
+                    self.captureGreen = False
+                    self.lastGreenLocation = green
                     # TODO in here return True
                 if self.greenCount > 20:
                     self.greenCount = 0
                     self.captureGreen = False
+                if self.greenCount == 1:
+                    self.lastGreenLocation = green
                     # TODO in here return False
 
-            if self.capturePurple:
+            if self.capturePurple and self.isGameRunning:
                 self.purpleCount += 1
                 purple = self.process_image(frame, hsv, purpleLower, purpleUpper)
                 is_purple = self.is_within_target(target, purple)
                 if is_purple:
                     print "Found purple!", self.count
                     self.count += 1
+                    self.purpleScore += 1
+                    self.capturePurple = False
+                    self.lastPurpleLocation = purple
                     # TODO in here return True
                 if self.purpleCount > 20:
                     self.purpleCount = 0
                     self.capturePurple = False
+                if self.purpleCount == 1:
+                    self.lastPurpleLocation = purple
                     # TODO in here return False
+
+            if self.lastGreenLocation:
+                self.draw_cross(frame, self.lastGreenLocation, (0, 255, 0))
+            if self.lastPurpleLocation:
+                self.draw_cross(frame, self.lastPurpleLocation, (255, 0, 255))
+
+            if self.purpleScore == 10:
+                cv2.putText(frame, "WINNER!", (190, 50), font, 2, (255, 0, 255), 2, cv2.CV_AA)
+                self.isGameRunning = False
+
+            if self.greenScore == 10:
+                cv2.putText(frame, "WINNER!", (190, 50), font, 2, (0, 255, 0), 2, cv2.CV_AA)
+                self.isGameRunning = False
 
             cv2.imshow("Frame", frame)
             key = cv2.waitKey(1) & 0xFF
@@ -156,6 +191,8 @@ class TargetDetector:
             if key == ord("m"):
                 self.capture_purple()
                 self.capture_green()
+            if key == ord("n"):
+                self.init_game()
 
 
         # cleanup the camera and close any open windows
