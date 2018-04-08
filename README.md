@@ -2,6 +2,14 @@
 
 Throw a rubber bear with ESP8266 towards moving target. ESP8266 measures acceleration, while camera detects target colour and bear colours.
 
+***
+# Dev
+
+flask 
+`FLASK_APP=app.py flask run --host 0.0.0.0`
+
+***
+
 
 Future Devs: 1. Moving Target. 2. Speed Detection. 3. Target With Multiple Circles 4. Hit speed is different for different color circles.
 
