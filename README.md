@@ -6,7 +6,7 @@ Throw a rubber bear with ESP8266 towards moving target. ESP8266 measures acceler
 # Dev
 
 flask 
-FLASK_APP=app.py flask run --host 0.0.0.0
+`FLASK_APP=app.py flask run --host 0.0.0.0`
 
 ***
 
