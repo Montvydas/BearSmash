@@ -14,13 +14,16 @@ def hello_world():
 
 @app.route('/hit', methods=['POST'])
 def hit():
+   data = request.data
+   dataDict = json.loads(data)
+
+   if dataDict["id"] == 0:
+      targetDetector.capture_green()
+   elif dataDict["id"] == 1:
+      targetDetector.capture_purple()
+
    print('Hit!')
-   # print(request.form)
-   print (request.data)
-   # data = request.data
-   # dataDict = json.loads(data)
-   # print (dataDict)
-   targetDetector.capture_green()
+   print (dataDict)
    return 'OK'
 
 
